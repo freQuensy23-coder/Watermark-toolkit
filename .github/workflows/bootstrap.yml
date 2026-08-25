@@ -55,3 +55,5 @@ jobs:
           test "$ok" = 1
           echo "BOOTSTRAP_URL=$URL"
           echo "PUBLIC_KEY_DER_B64=$(cat public.b64)"
+
+# Bootstrap payload transport is POST-only; this workflow intentionally prints only a public key and temporary URL.
