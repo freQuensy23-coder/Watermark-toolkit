@@ -58,7 +58,7 @@ async function discoverAccounts(token,verify){
 }
 async function uploadModule(accountId,token,name,source,bindings=[]){
   const form=new FormData();
-  form.append('metadata',new Blob([JSON.stringify({main_module:'worker.mjs',compatibility_date:'2026-08-26',bindings})],{type:'application/json'}),'metadata.json');
+  form.append('metadata',new Blob([JSON.stringify({main_module:'worker.mjs',compatibility_date:'2026-08-25',bindings})],{type:'application/json'}),'metadata.json');
   form.append('worker.mjs',new Blob([source],{type:'application/javascript+module'}),'worker.mjs');
   await requestJson(API+'/accounts/'+accountId+'/workers/scripts/'+name,{method:'PUT',body:form},token);
   await requestJson(API+'/accounts/'+accountId+'/workers/scripts/'+name+'/subdomain',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:true,previews_enabled:false})},token);
