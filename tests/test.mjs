@@ -44,13 +44,18 @@ assert.match(html, /Samsung Galaxy Z Fold7/);
 assert.match(html, /Sony α7 IV/);
 assert.match(html, /Canon EOS R5/);
 assert.match(html, /id="compareSlider"/);
+assert.match(html, /id="bulkPreview"/);
 assert.match(html, /id="downloadButton"/);
+assert.ok(html.indexOf('id="workspace"') < html.indexOf('class="settings"'), 'metadata settings must be below the processing area');
 assert.equal((html.match(/<button\b/g) || []).length, 3, 'UI must only have Single, Bulk and Download buttons');
 for (const removed of ['100% local processing', 'Detection', 'Manual position', 'New image', 'No image upload', 'privacy']) {
   assert.ok(!html.includes(removed), `old UI copy still present: ${removed}`);
 }
 
 assert.match(app, /fileInput\.multiple = mode === 'bulk'/);
+assert.match(app, /appendBulkPreview\(result\.source, result\.output\)/);
+assert.match(app, /bulkPreview\.replaceChildren\(\)/);
+assert.ok(!app.includes('if (first) setPreview'), 'bulk mode must not preview only the first file');
 assert.match(app, /Download ZIP/);
 assert.match(app, /makeZip\(files\)/);
 assert.match(app, /0x04034b50/);

@@ -15,6 +15,8 @@
   const dropZone = $('dropZone');
   const uploadLabel = $('uploadLabel');
   const workspace = $('workspace');
+  const singlePreview = $('singlePreview');
+  const bulkPreview = $('bulkPreview');
   const beforeCanvas = $('beforeCanvas');
   const afterCanvas = $('afterCanvas');
   const compareSlider = $('compareSlider');
@@ -230,7 +232,7 @@
     return new ImageData(out, width, height);
   }
 
-  function setPreview(source, output) {
+  function setSinglePreview(source, output) {
     beforeCanvas.width = afterCanvas.width = source.width;
     beforeCanvas.height = afterCanvas.height = source.height;
     beforeCtx.putImageData(source, 0, 0);
@@ -238,7 +240,44 @@
     compareSlider.value = '50';
     afterCanvas.style.clipPath = 'inset(0 0 0 50%)';
     splitLine.style.left = '50%';
+    singlePreview.classList.remove('hidden');
+    bulkPreview.classList.add('hidden');
     workspace.classList.remove('hidden');
+  }
+
+  function imageDataToCanvas(imageData) {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    canvas.getContext('2d').putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
+  function appendBulkPreview(source, output) {
+    const item = document.createElement('div');
+    item.className = 'bulk-item';
+    const before = document.createElement('canvas');
+    const after = document.createElement('canvas');
+    const split = document.createElement('div');
+    after.className = 'bulk-after';
+    split.className = 'bulk-split';
+
+    const targetWidth = Math.min(420, source.width);
+    const scale = targetWidth / source.width;
+    const targetHeight = Math.max(1, Math.round(source.height * scale));
+    before.width = after.width = Math.max(1, Math.round(targetWidth));
+    before.height = after.height = targetHeight;
+
+    const sourceCanvas = imageDataToCanvas(source);
+    const outputCanvas = imageDataToCanvas(output);
+    before.getContext('2d').drawImage(sourceCanvas, 0, 0, before.width, before.height);
+    after.getContext('2d').drawImage(outputCanvas, 0, 0, after.width, after.height);
+    item.append(before, after, split);
+    bulkPreview.append(item);
+  }
+
+  function clearBulkPreview() {
+    bulkPreview.replaceChildren();
   }
 
   async function fileToImageData(file) {
@@ -414,6 +453,7 @@
     state.processing = true;
     downloadButton.disabled = true;
     workspace.classList.add('hidden');
+    clearBulkPreview();
     try {
       if (state.mode === 'single') {
         const file = accepted[0];
@@ -422,21 +462,22 @@
         state.singleName = baseName(file.name);
         state.singleReady = true;
         state.bulk = [];
-        setPreview(result.source, result.output);
+        setSinglePreview(result.source, result.output);
         downloadButton.textContent = 'Download';
       } else {
         uploadLabel.textContent = `${accepted.length} images`;
         const results = [];
-        let first = null;
+        singlePreview.classList.add('hidden');
+        bulkPreview.classList.remove('hidden');
         for (let i = 0; i < accepted.length; i += 1) {
           downloadButton.textContent = `${i + 1}/${accepted.length}`;
           const result = await processFile(accepted[i]);
-          if (!first) first = result;
+          appendBulkPreview(result.source, result.output);
           results.push({ name: baseName(accepted[i].name), cleanPng: result.cleanPng });
         }
         state.bulk = results;
         state.singleReady = false;
-        if (first) setPreview(first.source, first.output);
+        workspace.classList.remove('hidden');
         downloadButton.textContent = 'Download ZIP';
       }
     } finally {
@@ -539,6 +580,9 @@
     uploadLabel.textContent = mode === 'bulk' ? 'Choose images' : 'Choose image';
     downloadButton.textContent = mode === 'bulk' ? 'Download ZIP' : 'Download';
     workspace.classList.add('hidden');
+    singlePreview.classList.remove('hidden');
+    bulkPreview.classList.add('hidden');
+    clearBulkPreview();
     fileInput.value = '';
   }
 
