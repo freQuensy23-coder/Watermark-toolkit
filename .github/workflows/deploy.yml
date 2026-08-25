@@ -62,5 +62,5 @@ jobs:
           }
           verify_url "$DEPLOY_URL"
           verify_url "https://watermark-toolkit.pages.dev"
-          curl --fail --silent --show-error https://watermark-toolkit.pages.dev/ | grep -q 'Gemini watermark remover'
-          curl --fail --silent --show-error https://watermark-toolkit.pages.dev/app.js | grep -q 'gemini-diamond-96px.png'
+          curl --fail --silent --show-error https://watermark-toolkit.pages.dev/ | grep -q 'Watermark Toolkit'
+          curl --fail --silent --show-error https://watermark-toolkit.pages.dev/app.js | grep -q 'Download ZIP'
