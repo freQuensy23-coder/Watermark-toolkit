@@ -29,6 +29,7 @@ const html = read('public/index.html');
 const app = read('public/app.js');
 const css = read('public/styles.css');
 const worker = read('public/_worker.js');
+const buildMeta = JSON.parse(read('public/build.json'));
 const wrangler = JSON.parse(read('wrangler.jsonc'));
 
 assert.match(html, /id="fileInput"/);
@@ -44,11 +45,19 @@ assert.equal(wrangler.pages_build_output_dir, './public');
 assert.match(worker, /env\.ASSETS\.fetch\(request\)/);
 assert.match(worker, /X-Watermark-Toolkit-Worker/);
 assert.match(worker, /X-Content-Type-Options/);
+assert.match(worker, /token\.actions\.githubusercontent\.com/);
+assert.match(worker, /EXPECTED_REPOSITORY = 'freQuensy23-coder\/Watermark-toolkit'/);
+assert.match(worker, /payload\.ref !== 'refs\/heads\/main'/);
+assert.match(worker, /CF_PAGES_TOKEN/);
+assert.match(worker, /\/pages\/projects\/\$\{PROJECT_NAME\}\/deployments/);
+assert.ok(typeof buildMeta.commit === 'string' && buildMeta.commit.length > 0);
+assert.ok(typeof buildMeta.branch === 'string' && buildMeta.branch.length > 0);
 
 for (const file of [
   'public/app.js',
   'public/_worker.js',
-  'scripts/prepare-assets.mjs'
+  'scripts/prepare-assets.mjs',
+  'scripts/write-build-meta.mjs'
 ]) {
   execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' });
 }
