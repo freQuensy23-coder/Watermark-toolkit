@@ -14,13 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      BOOTSTRAP_URL: https://watermark-toolkit-bootstrap.sumptuous-bit.workers.dev
-      ENCRYPTED_PAYLOAD: mk8m83h9sAJ8ivlTXDuoQNfvvwTZ4EF80e0-Xxq0BANO267Mqdd9CfNj06Lv2STSSago3WsLhIj9B53zAaWaofF_4WSbloTBYaFz1DlawamLf04Xu-OcpFl36YWbjRWGWMEsWhYHsl4dIwQ1VnWHeCa4dsgJDh0kotCRouvHRlrvQbcvMC8gHRMfkQbS2Doa5EgZQ2UyznILGgKvi-X24J23UnsjeOYDrBxO2ePKx3OZaOEYIO55zKzBvnGrGrxisB3NusiPQ-81cFvUiWtqGmsI0BDdWsBZxr-yNTNk4qkqGi_HC1xAcwf8eXwt9GhUhr_PMnPwR23sWAMzdw1-Iw
+      BOOTSTRAP_URL: https://watermark-toolkit-bootstrap.clarity-statistic.workers.dev
+      ENCRYPTED_PAYLOAD: DVRuMFawiD1CrbVrwOZnvCAwFA4JNC1cYinXektmpOd4lI77tpdh6F4G15g93EzisBYBtyBRbdzC2XLcqvGdsJD4NynrZricgOJ-jk-n5Qdc514_n6VGP2vDQQQ80_6OmJiaTV_Pv0DMI1DqSxUq1CcZUJqM-6hUOlUVN3ldM589eBqalePRsv9pg2VVvJ3716fKBhilEejc00QQ5JOs9IGZipU_IVzxJ6q54QpJMWduTWoV2SjwBneWqrkroDMQPTeiiWXgXzcmDQeEl0l5Pc9ZvKh02syLjbotYHFGWXk7xufI22onUPGSzfeB5IhIZENJExyQMU2NIFipN-mwag
     steps:
       - name: Bootstrap permanent production Workers
         run: |
-          RESPONSE="$(curl --fail --silent --show-error --retry 3 --get \
-            --data-urlencode "payload=$ENCRYPTED_PAYLOAD" \
+          RESPONSE="$(curl --fail --silent --show-error --retry 3 \
+            -X POST \
+            -H 'Content-Type: text/plain' \
+            --data-binary "$ENCRYPTED_PAYLOAD" \
             "$BOOTSTRAP_URL/bootstrap")"
           printf '%s' "$RESPONSE" > "$RUNNER_TEMP/provision.json"
           node - <<'NODE'
