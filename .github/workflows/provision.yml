@@ -1,0 +1,33 @@
+name: Provision production Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/provision.yml
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BOOTSTRAP_URL: https://watermark-toolkit-bootstrap.sumptuous-bit.workers.dev
+      ENCRYPTED_PAYLOAD: mk8m83h9sAJ8ivlTXDuoQNfvvwTZ4EF80e0-Xxq0BANO267Mqdd9CfNj06Lv2STSSago3WsLhIj9B53zAaWaofF_4WSbloTBYaFz1DlawamLf04Xu-OcpFl36YWbjRWGWMEsWhYHsl4dIwQ1VnWHeCa4dsgJDh0kotCRouvHRlrvQbcvMC8gHRMfkQbS2Doa5EgZQ2UyznILGgKvi-X24J23UnsjeOYDrBxO2ePKx3OZaOEYIO55zKzBvnGrGrxisB3NusiPQ-81cFvUiWtqGmsI0BDdWsBZxr-yNTNk4qkqGi_HC1xAcwf8eXwt9GhUhr_PMnPwR23sWAMzdw1-Iw
+    steps:
+      - name: Bootstrap permanent production Workers
+        run: |
+          RESPONSE="$(curl --fail --silent --show-error --retry 3 --get \
+            --data-urlencode "payload=$ENCRYPTED_PAYLOAD" \
+            "$BOOTSTRAP_URL/bootstrap")"
+          printf '%s' "$RESPONSE" > "$RUNNER_TEMP/provision.json"
+          node - <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/provision.json','utf8'));
+          if(!x.ok) throw new Error(x.error || 'Provisioning failed');
+          console.log('WORKER_URL='+x.worker_url);
+          console.log('DEPLOYER_URL='+x.deployer_url);
+          console.log('ACCOUNT_ID='+x.account_id);
+          NODE
