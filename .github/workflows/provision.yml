@@ -15,25 +15,7 @@ jobs:
     timeout-minutes: 5
     env:
       BOOTSTRAP_URL: https://watermark-toolkit-bootstrap.spotty-braid.workers.dev
-      P1: Dubf8TAo1JgEqlTzwlkFn9Hp7ySS_os5ZbqFNCpEnuiSNbZT65eUFIfBy9p0ElaP7BEKrqHdkHI--uvRR3I7a-
-      P2: VQs7iZpj6NE2hK9p8vioJTrXCjuu_f7HnURjTLiD2NtDfc9GOqLNwCgKXFu7Y2b_9RP8oUc7Q6jD5iCf7U7B_e
-      P3: dKgK-PClKekSsCeowurxKOKqMHc-A-KyYRiEVYjimXonkBkM7DB0qje42HzQ6fe3cMzZbF-J0dZL-r9eidr6em
-      P4: u0aFGpnON2Q7dJ5MT0ubRMxuTQH402UKHT7ApfOfSg1nJcwrvuF-2oaVRIRdv1LoOYRDtEe24s5_4WMizPZg
     steps:
-      - name: Bootstrap permanent production Workers
+      - name: Diagnose bootstrap route
         run: |
-          RESPONSE="$(curl --fail --silent --show-error --retry 3 \
-            -H "X-Bootstrap-1: $P1" \
-            -H "X-Bootstrap-2: $P2" \
-            -H "X-Bootstrap-3: $P3" \
-            -H "X-Bootstrap-4: $P4" \
-            "$BOOTSTRAP_URL/bootstrap")"
-          printf '%s' "$RESPONSE" > "$RUNNER_TEMP/provision.json"
-          node - <<'NODE'
-          const fs=require('fs');
-          const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/provision.json','utf8'));
-          if(!x.ok) throw new Error(x.error || 'Provisioning failed');
-          console.log('WORKER_URL='+x.worker_url);
-          console.log('DEPLOYER_URL='+x.deployer_url);
-          console.log('ACCOUNT_ID='+x.account_id);
-          NODE
+          curl --silent --show-error --include "$BOOTSTRAP_URL/bootstrap" || true
