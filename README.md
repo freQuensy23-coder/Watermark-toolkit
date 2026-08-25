@@ -1,46 +1,36 @@
 # Watermark Toolkit
 
-Privacy-first web tool for removing the **visible Gemini diamond watermark** from original Gemini images. Processing happens entirely in the browser with Canvas: image bytes are never uploaded to Cloudflare or any third party.
+Client-side Gemini visible-watermark remover.
 
-## Live
+Live: https://watermark-toolkit.pages.dev
 
-https://watermark-toolkit.pages.dev
+## Modes
 
-The site runs through Cloudflare's Worker runtime using Pages advanced mode (`public/_worker.js`). The Worker serves the static application through the `ASSETS` binding and adds a runtime verification header; image processing stays client-side.
+- **Single** — process one image, compare before/after, download PNG.
+- **Bulk** — process multiple images and download the results as one ZIP.
 
-## How it works
+## Metadata
 
-The visible watermark is a white alpha-blended overlay. Using the calibrated per-pixel alpha mask, each RGB channel is recovered with:
+Every output is re-encoded in the browser, so source metadata is removed. `Strip metadata` leaves the output clean. `Set metadata` adds only the selected EXIF fields: location/GPS plus device Make/Model. The default location is Tel Aviv, Israel. Device presets include phones and cameras, with custom Make/Model support.
 
-`original = (watermarked - alpha * 255) / (1 - alpha)`
-
-Supported profiles are Gemini 3.5 36 px, Gemini 3.6 48 px, and large-output 96 px. Auto mode searches the expected bottom-right geometry; manual positioning is available for unusual placements.
-
-## CI/CD
-
-Every push to `main` runs `npm test` in GitHub Actions. After tests pass, GitHub issues a short-lived OIDC token for this exact repository and commit. The production Worker verifies the OIDC signature and claims, then asks the Cloudflare Pages API to build and deploy the current `main` revision. GitHub Actions waits for both the immutable deployment URL and the production alias to report the exact commit SHA and Worker runtime header before succeeding.
-
-No long-lived Cloudflare credential is stored in GitHub. The deployment credential is stored as an encrypted Cloudflare Pages secret and is only available to the authenticated Worker relay.
-
-Local commands:
+## Development
 
 ```bash
 npm install
 npm test
 npm run dev
-npm run deploy
 ```
+
+## CI/CD
+
+Every push to `main` runs tests, obtains a short-lived GitHub OIDC token, triggers the Cloudflare Pages deployment relay, then verifies that both the immutable deployment URL and production alias serve the exact commit SHA through the Worker runtime.
+
+No long-lived Cloudflare deployment credential is stored in GitHub.
 
 ## Privacy
 
-- no image upload endpoint
-- no analytics
-- no cookies or local storage
-- no runtime CDN dependencies
-- local PNG/JPEG/WebP decoding and PNG export
+Image processing and metadata rewriting happen in the browser. Images are not uploaded to the Worker or third-party services.
 
-This tool targets the visible overlay only. It does not remove or claim to remove invisible provenance signals such as SynthID.
+## License
 
-## Credits and license
-
-Application code is MIT licensed. Calibrated Gemini alpha-mask assets are redistributed under their upstream MIT license; see `THIRD_PARTY_NOTICES.md`.
+Application code is MIT licensed. Watermark mask assets retain their upstream MIT license; see `THIRD_PARTY_NOTICES.md`.
