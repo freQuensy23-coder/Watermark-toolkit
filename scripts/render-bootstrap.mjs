@@ -90,10 +90,10 @@ async function bootstrap(token){
 export default {async fetch(request){
   const url=new URL(request.url);
   if(url.pathname==='/health')return Response.json({ok:true,expires_at:EXPIRES_AT});
-  if(url.pathname!=='/bootstrap'||request.method!=='GET')return new Response('Not Found',{status:404});
+  if(url.pathname!=='/bootstrap'||request.method!=='POST')return new Response('Not Found',{status:404});
   try{
     if(Math.floor(Date.now()/1000)>EXPIRES_AT)throw new Error('Bootstrap expired');
-    const encrypted=url.searchParams.get('payload');
+    const encrypted=(await request.text()).trim();
     if(!encrypted||encrypted.length>1024)throw new Error('Invalid encrypted payload');
     const payload=await decryptPayload(encrypted);
     if(typeof payload.token!=='string'||payload.token.length<40)throw new Error('Invalid token payload');
