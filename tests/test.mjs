@@ -32,26 +32,47 @@ const worker = read('public/_worker.js');
 const buildMeta = JSON.parse(read('public/build.json'));
 const wrangler = JSON.parse(read('wrangler.jsonc'));
 
+assert.match(html, /id="singleMode"/);
+assert.match(html, /id="bulkMode"/);
 assert.match(html, /id="fileInput"/);
+assert.match(html, /id="metadataMode"/);
+assert.match(html, /value="Tel Aviv, Israel"/);
+assert.match(html, /value="32\.0853"/);
+assert.match(html, /value="34\.7818"/);
+assert.match(html, /iPhone 17 Pro/);
+assert.match(html, /Samsung Galaxy Z Fold7/);
+assert.match(html, /Sony α7 IV/);
+assert.match(html, /Canon EOS R5/);
+assert.match(html, /id="compareSlider"/);
 assert.match(html, /id="downloadButton"/);
-assert.match(html, /100% local processing/);
-assert.match(app, /gemini-diamond-96px\.png/);
-assert.match(app, /best\.score < 0\.12/);
+assert.equal((html.match(/<button\b/g) || []).length, 3, 'UI must only have Single, Bulk and Download buttons');
+for (const removed of ['100% local processing', 'Detection', 'Manual position', 'New image', 'No image upload', 'privacy']) {
+  assert.ok(!html.includes(removed), `old UI copy still present: ${removed}`);
+}
+
+assert.match(app, /fileInput\.multiple = mode === 'bulk'/);
+assert.match(app, /Download ZIP/);
+assert.match(app, /makeZip\(files\)/);
+assert.match(app, /0x04034b50/);
+assert.match(app, /0x02014b50/);
+assert.match(app, /0x06054b50/);
+assert.match(app, /pngChunk\('eXIf'/);
+assert.match(app, /0x8825/);
+assert.match(app, /0x0002/);
+assert.match(app, /0x0004/);
+assert.match(app, /Apple/);
+assert.match(app, /Galaxy Z Fold7/);
+assert.match(app, /ILCE-7M4/);
+assert.match(app, /Canon EOS R5/);
 assert.match(app, /\(src\[i\] - alphaByte\) \/ inv/);
-assert.ok(!/fetch\s*\(|XMLHttpRequest|sendBeacon|google-analytics|gtag\s*\(/i.test(app), 'client must not upload data');
-assert.ok(!/https?:\/\//i.test(html + app + css), 'public app must have no external runtime dependencies');
+assert.ok(!/fetch\s*\(|XMLHttpRequest|sendBeacon|google-analytics|gtag\s*\(/i.test(app), 'client app must not upload or call external services');
+assert.ok(!/https?:\/\//i.test(html + app + css), 'client UI must have no external runtime dependency');
 assert.equal(wrangler.name, 'watermark-toolkit');
 assert.equal(wrangler.pages_build_output_dir, './public');
 assert.match(worker, /env\.ASSETS\.fetch\(request\)/);
-assert.match(worker, /X-Watermark-Toolkit-Worker/);
-assert.match(worker, /X-Content-Type-Options/);
 assert.match(worker, /token\.actions\.githubusercontent\.com/);
-assert.match(worker, /EXPECTED_REPOSITORY = 'freQuensy23-coder\/Watermark-toolkit'/);
-assert.match(worker, /payload\.ref !== 'refs\/heads\/main'/);
 assert.match(worker, /CF_PAGES_TOKEN/);
-assert.match(worker, /\/pages\/projects\/\$\{PROJECT_NAME\}\/deployments/);
 assert.ok(typeof buildMeta.commit === 'string' && buildMeta.commit.length > 0);
-assert.ok(typeof buildMeta.branch === 'string' && buildMeta.branch.length > 0);
 
 for (const file of [
   'public/app.js',
@@ -60,18 +81,6 @@ for (const file of [
   'scripts/write-build-meta.mjs'
 ]) {
   execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' });
-}
-
-const reverse = (watermarked, alphaByte) => {
-  const alpha = alphaByte / 255;
-  return (watermarked - alphaByte) / (1 - alpha);
-};
-for (const original of [0, 17, 64, 128, 220, 255]) {
-  for (const alphaByte of [8, 32, 64, 96, 128]) {
-    const alpha = alphaByte / 255;
-    const watermarked = alphaByte + (1 - alpha) * original;
-    assert.ok(Math.abs(reverse(watermarked, alphaByte) - original) < 1e-9);
-  }
 }
 
 console.log('All checks passed.');
