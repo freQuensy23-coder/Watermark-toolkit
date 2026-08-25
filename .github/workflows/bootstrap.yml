@@ -37,7 +37,7 @@ jobs:
           {
             "name": "watermark-toolkit-bootstrap",
             "main": "worker.mjs",
-            "compatibility_date": "2026-08-26"
+            "compatibility_date": "2026-08-25"
           }
           JSON
       - name: Deploy ephemeral encrypted bootstrap endpoint
