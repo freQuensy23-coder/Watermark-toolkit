@@ -102,11 +102,11 @@ app = replaceOnce(app,
         setPreview(result.source, result.output);
         downloadButton.textContent = 'Download';
       } else {
-        uploadLabel.textContent = \`${accepted.length} images\`;
+        uploadLabel.textContent = \`\${accepted.length} images\`;
         const results = [];
         let first = null;
         for (let i = 0; i < accepted.length; i += 1) {
-          downloadButton.textContent = \`${i + 1}/${accepted.length}\`;
+          downloadButton.textContent = \`\${i + 1}/\${accepted.length}\`;
           const result = await processFile(accepted[i]);
           if (!first) first = result;
           results.push({ name: baseName(accepted[i].name), cleanPng: result.cleanPng });
@@ -142,12 +142,12 @@ app = replaceOnce(app,
         setSinglePreview(result.source, result.output);
         downloadButton.textContent = 'Download';
       } else {
-        uploadLabel.textContent = \`${accepted.length} images\`;
+        uploadLabel.textContent = \`\${accepted.length} images\`;
         const results = [];
         singlePreview.classList.add('hidden');
         bulkPreview.classList.remove('hidden');
         for (let i = 0; i < accepted.length; i += 1) {
-          downloadButton.textContent = \`${i + 1}/${accepted.length}\`;
+          downloadButton.textContent = \`\${i + 1}/\${accepted.length}\`;
           const result = await processFile(accepted[i]);
           appendBulkPreview(result.source, result.output);
           results.push({ name: baseName(accepted[i].name), cleanPng: result.cleanPng });
@@ -180,11 +180,9 @@ app = replaceOnce(app,
 `,
 'mode reset');
 
-// Guard against the old broken behavior ever returning.
 if (/if \(first\) setPreview/.test(app)) throw new Error('Old first-image-only bulk preview still present');
 if (!app.includes('appendBulkPreview(result.source, result.output)')) throw new Error('Bulk preview renderer was not installed');
 
-// Extend static regression coverage.
 test = replaceOnce(test,
 `assert.match(html, /id="compareSlider"/);
 assert.match(html, /id="downloadButton"/);`,
