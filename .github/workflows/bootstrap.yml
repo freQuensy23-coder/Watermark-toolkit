@@ -56,4 +56,4 @@ jobs:
           echo "BOOTSTRAP_URL=$URL"
           echo "PUBLIC_KEY_DER_B64=$(cat public.b64)"
 
-# Bootstrap payload transport is POST-only; this workflow intentionally prints only a public key and temporary URL.
+# Encrypted bootstrap payload is transported in custom request headers; only the public key and temporary URL are logged here.
