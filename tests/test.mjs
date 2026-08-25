@@ -29,6 +29,8 @@ const html = read('public/index.html');
 const app = read('public/app.js');
 const css = read('public/styles.css');
 const wrangler = JSON.parse(read('wrangler.jsonc'));
+const bundle = read('dist/worker.mjs');
+const deployer = read('scripts/cicd-deployer.mjs');
 
 assert.match(html, /id="fileInput"/);
 assert.match(html, /id="downloadButton"/);
@@ -40,9 +42,23 @@ assert.ok(!/fetch\s*\(|XMLHttpRequest|sendBeacon|google-analytics|gtag\s*\(/i.te
 assert.ok(!/https?:\/\//i.test(html + app + css), 'public app must have no external runtime dependencies');
 assert.equal(wrangler.name, 'watermark-toolkit');
 assert.equal(wrangler.assets.directory, './public');
+assert.match(bundle, /Watermark Toolkit production bundle/);
+assert.match(bundle, /gemini-diamond-96px\.png/);
+assert.match(bundle, /connect-src 'none'/);
+assert.match(deployer, /EXPECTED_REPOSITORY_ID = '1346650339'/);
+assert.match(deployer, /token\.actions\.githubusercontent\.com\/\.well-known\/jwks/);
+assert.match(deployer, /payload\.ref !== 'refs\/heads\/main'/);
 
-execFileSync(process.execPath, ['--check', 'public/app.js'], { stdio: 'inherit' });
-execFileSync(process.execPath, ['--check', 'scripts/prepare-assets.mjs'], { stdio: 'inherit' });
+for (const file of [
+  'public/app.js',
+  'scripts/prepare-assets.mjs',
+  'scripts/build-worker.mjs',
+  'scripts/cicd-deployer.mjs',
+  'scripts/render-bootstrap.mjs',
+  'dist/worker.mjs'
+]) {
+  execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' });
+}
 
 const reverse = (watermarked, alphaByte) => {
   const alpha = alphaByte / 255;
