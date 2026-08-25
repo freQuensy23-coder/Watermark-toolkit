@@ -468,7 +468,7 @@
       const lv = new DataView(local.buffer);
       lv.setUint32(0, 0x04034b50, true);
       lv.setUint16(4, 20, true);
-      lv.setUint16(6, 0, true);
+      lv.setUint16(6, 0x0800, true);
       lv.setUint16(8, 0, true);
       lv.setUint16(10, time, true);
       lv.setUint16(12, day, true);
@@ -485,7 +485,7 @@
       cv.setUint32(0, 0x02014b50, true);
       cv.setUint16(4, 20, true);
       cv.setUint16(6, 20, true);
-      cv.setUint16(8, 0, true);
+      cv.setUint16(8, 0x0800, true);
       cv.setUint16(10, 0, true);
       cv.setUint16(12, time, true);
       cv.setUint16(14, day, true);
