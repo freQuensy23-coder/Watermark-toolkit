@@ -76,7 +76,7 @@ async function uploadWorker(accountId, apiToken, source) {
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify({
     main_module: 'worker.mjs',
-    compatibility_date: '2026-08-26'
+    compatibility_date: '2026-08-25'
   })], { type: 'application/json' }), 'metadata.json');
   form.append('worker.mjs', new Blob([source], { type: 'application/javascript+module' }), 'worker.mjs');
 
