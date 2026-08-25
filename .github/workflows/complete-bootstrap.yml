@@ -1,0 +1,26 @@
+name: Complete production bootstrap
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/complete-bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  complete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Bootstrap permanent Cloudflare Workers
+        env:
+          BOOTSTRAP_URL: https://watermark-toolkit-bootstrap.sumptuous-bit.workers.dev
+          ENCRYPTED_PAYLOAD: UMCzoA_EIV4IfDdqLHCmT4CrrOGvyYy2dGjUUMZ9tDXBzlkrgSWfPYa2yDdY49wRAMaUjuCM39syfl9K3XT4bORBk3HoG3nqrjQZPYOiXld__CYndWh0b4AWCi1XcPRAS1uFTyvFuUstJ85_GKCq3fdm6Fzu4YW0pKpvNXnSfsotVmwj_bHxvOBsVRkc30JyDgtkRIKyuzwrbtPK3NrS4-wUMzARtpDJOGEicw8s2MxN52u7qOpxHcgXl4umqpgS3iTTCtLiRwKpuV2TxUfNs9MOQUGUtNDveVa1X104yNJDkJlgtCAZ4yxVB7Gwx3KKgEAwNLelnfwndEdwe0bZoQ
+        run: |
+          curl --fail --silent --show-error "$BOOTSTRAP_URL/health"
+          RESPONSE="$(curl --fail --silent --show-error --get --data-urlencode "payload=$ENCRYPTED_PAYLOAD" "$BOOTSTRAP_URL/bootstrap")"
+          printf '%s\n' "$RESPONSE"
+          printf '%s' "$RESPONSE" | grep -q '"ok":true'
