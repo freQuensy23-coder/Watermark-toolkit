@@ -28,9 +28,8 @@ for (const [path, size, sha] of assets) {
 const html = read('public/index.html');
 const app = read('public/app.js');
 const css = read('public/styles.css');
+const worker = read('public/_worker.js');
 const wrangler = JSON.parse(read('wrangler.jsonc'));
-const bundle = read('dist/worker.mjs');
-const deployer = read('scripts/cicd-deployer.mjs');
 
 assert.match(html, /id="fileInput"/);
 assert.match(html, /id="downloadButton"/);
@@ -41,21 +40,15 @@ assert.match(app, /\(src\[i\] - alphaByte\) \/ inv/);
 assert.ok(!/fetch\s*\(|XMLHttpRequest|sendBeacon|google-analytics|gtag\s*\(/i.test(app), 'client must not upload data');
 assert.ok(!/https?:\/\//i.test(html + app + css), 'public app must have no external runtime dependencies');
 assert.equal(wrangler.name, 'watermark-toolkit');
-assert.equal(wrangler.assets.directory, './public');
-assert.match(bundle, /Watermark Toolkit production bundle/);
-assert.match(bundle, /gemini-diamond-96px\.png/);
-assert.match(bundle, /connect-src 'none'/);
-assert.match(deployer, /EXPECTED_REPOSITORY_ID = '1346650339'/);
-assert.match(deployer, /token\.actions\.githubusercontent\.com\/\.well-known\/jwks/);
-assert.match(deployer, /payload\.ref !== 'refs\/heads\/main'/);
+assert.equal(wrangler.pages_build_output_dir, './public');
+assert.match(worker, /env\.ASSETS\.fetch\(request\)/);
+assert.match(worker, /X-Watermark-Toolkit-Worker/);
+assert.match(worker, /X-Content-Type-Options/);
 
 for (const file of [
   'public/app.js',
-  'scripts/prepare-assets.mjs',
-  'scripts/build-worker.mjs',
-  'scripts/cicd-deployer.mjs',
-  'scripts/render-bootstrap.mjs',
-  'dist/worker.mjs'
+  'public/_worker.js',
+  'scripts/prepare-assets.mjs'
 ]) {
   execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' });
 }
