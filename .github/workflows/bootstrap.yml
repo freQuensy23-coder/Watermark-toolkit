@@ -1,0 +1,56 @@
+name: Bootstrap production deployer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Verify and build target Worker
+        run: npm test
+      - name: Generate ephemeral encryption key
+        run: |
+          mkdir -p "$RUNNER_TEMP/bootstrap"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$RUNNER_TEMP/bootstrap/private.pem" >/dev/null 2>&1
+          openssl pkcs8 -topk8 -inform PEM -outform DER -nocrypt -in "$RUNNER_TEMP/bootstrap/private.pem" | base64 -w0 > "$RUNNER_TEMP/bootstrap/private.b64"
+          openssl pkey -in "$RUNNER_TEMP/bootstrap/private.pem" -pubout -outform DER | base64 -w0 > "$RUNNER_TEMP/bootstrap/public.b64"
+      - name: Render encrypted bootstrap Worker
+        run: |
+          node scripts/render-bootstrap.mjs \
+            "$RUNNER_TEMP/bootstrap/private.b64" \
+            dist/worker.mjs \
+            scripts/cicd-deployer.mjs \
+            "$RUNNER_TEMP/bootstrap/worker.mjs"
+          cat > "$RUNNER_TEMP/bootstrap/wrangler.jsonc" <<'JSON'
+          {
+            "name": "watermark-toolkit-bootstrap",
+            "main": "worker.mjs",
+            "compatibility_date": "2026-08-26"
+          }
+          JSON
+      - name: Deploy ephemeral encrypted bootstrap endpoint
+        working-directory: ${{ runner.temp }}/bootstrap
+        run: |
+          npx -y wrangler@4.125.0 deploy --temporary --config wrangler.jsonc | tee wrangler.log
+          URL="$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' wrangler.log | tail -1)"
+          test -n "$URL"
+          ok=0
+          for i in $(seq 1 10); do
+            if curl --fail --silent --show-error "$URL/health" | grep -q '"ok":true'; then ok=1; break; fi
+            sleep 2
+          done
+          test "$ok" = 1
+          echo "BOOTSTRAP_URL=$URL"
+          echo "PUBLIC_KEY_DER_B64=$(cat public.b64)"
