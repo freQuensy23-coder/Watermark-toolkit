@@ -28,9 +28,42 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v6
-      - name: Deploy to Cloudflare Workers
+
+      - name: Deploy production Worker
+        id: production
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.125.0
           command: deploy
+
+      - name: Smoke test production Worker
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        env:
+          DEPLOYMENT_URL: ${{ steps.production.outputs.deployment-url }}
+        run: |
+          URL="$(printf '%s' "$DEPLOYMENT_URL" | sed 's/ .*//')"
+          case "$URL" in http*) ;; *) URL="https://$URL" ;; esac
+          for i in 1 2 3; do
+            curl --fail --silent --show-error --retry 3 "$URL" | grep -q "Gemini watermark remover"
+          done
+          echo "Production smoke test passed: $URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy temporary Worker when Cloudflare secret is not configured
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN == '' }}
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
+        run: npx -y wrangler@4.125.0 deploy --temporary
+
+      - name: Smoke test temporary Worker
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN == '' }}
+        env:
+          OUTPUT_FILE: ${{ runner.temp }}/wrangler-output.json
+        run: |
+          URL="$(node -e 'const fs=require("fs");const xs=fs.readFileSync(process.env.OUTPUT_FILE,"utf8").trim().split(/\n+/).map(JSON.parse);const d=xs.reverse().find(x=>x.type==="deploy");if(!d||!d.targets?.[0])process.exit(2);process.stdout.write(d.targets[0]);')"
+          for i in 1 2 3; do
+            curl --fail --silent --show-error --retry 3 "$URL" | grep -q "Gemini watermark remover"
+          done
+          echo "Temporary smoke test passed: $URL" >> "$GITHUB_STEP_SUMMARY"
