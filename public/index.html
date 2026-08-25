@@ -3,67 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Remove the visible Gemini watermark locally in your browser. No uploads, no account, no server processing.">
-  <title>Gemini Watermark Remover</title>
+  <title>Watermark Toolkit</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="hero">
-      <div class="eyebrow"><span class="dot"></span> 100% local processing</div>
-      <h1>Gemini watermark remover</h1>
-      <p>Drop an original Gemini image. The visible diamond is reconstructed in your browser and the image never leaves your device.</p>
-    </header>
+  <main class="app">
+    <nav class="modes" aria-label="Mode">
+      <button id="singleMode" class="mode active" type="button">Single</button>
+      <button id="bulkMode" class="mode" type="button">Bulk</button>
+    </nav>
 
-    <section class="card" aria-label="Watermark remover">
-      <label id="dropZone" class="drop-zone" for="fileInput">
-        <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-        <div class="upload-icon" aria-hidden="true">↑</div>
-        <strong>Choose an image</strong>
-        <span>or drag and drop PNG, JPEG, or WebP</span>
-      </label>
+    <h1>Watermark Toolkit</h1>
 
-      <div id="workspace" class="workspace hidden">
-        <div class="preview-wrap" id="previewWrap">
-          <canvas id="beforeCanvas" aria-label="Original image"></canvas>
-          <canvas id="afterCanvas" class="after-canvas" aria-label="Processed image"></canvas>
-          <div class="split-line" id="splitLine" aria-hidden="true"></div>
-        </div>
+    <div class="settings">
+      <select id="metadataMode" aria-label="Metadata">
+        <option value="set" selected>Set metadata</option>
+        <option value="strip">Strip metadata</option>
+      </select>
+      <input id="locationName" value="Tel Aviv, Israel" aria-label="Location" placeholder="Location">
+      <input id="latitude" type="number" step="any" value="32.0853" aria-label="Latitude" placeholder="Latitude">
+      <input id="longitude" type="number" step="any" value="34.7818" aria-label="Longitude" placeholder="Longitude">
+      <select id="devicePreset" aria-label="Device">
+        <option value="iphone17pro" selected>iPhone 17 Pro</option>
+        <option value="fold7">Samsung Galaxy Z Fold7</option>
+        <option value="sonya7iv">Sony α7 IV</option>
+        <option value="canonr5">Canon EOS R5</option>
+        <option value="custom">Custom</option>
+      </select>
+      <input id="customMake" class="hidden" aria-label="Make" placeholder="Make">
+      <input id="customModel" class="hidden" aria-label="Model" placeholder="Model">
+    </div>
 
-        <div class="compare-row">
-          <span>Original</span>
-          <input id="compareSlider" class="compare-slider" type="range" min="0" max="100" value="50" aria-label="Before and after comparison">
-          <span>Cleaned</span>
-        </div>
+    <label id="dropZone" class="drop-zone" for="fileInput">
+      <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+      <span id="uploadLabel">Choose image</span>
+    </label>
 
-        <div class="status-row">
-          <div>
-            <div class="status-label">Detection</div>
-            <div id="statusText" class="status-text">Ready</div>
-          </div>
-          <button id="manualButton" class="ghost-button" type="button">Manual position</button>
-        </div>
-
-        <div id="manualPanel" class="manual-panel hidden">
-          <div class="manual-copy">Click the center of the visible Gemini diamond in the preview.</div>
-          <label class="size-label">Mask size
-            <select id="maskSize">
-              <option value="48" selected>48 px · Gemini 3.6</option>
-              <option value="36">36 px · Gemini 3.5</option>
-              <option value="96">96 px · large output</option>
-            </select>
-          </label>
-          <button id="cancelManual" class="ghost-button" type="button">Cancel</button>
-        </div>
-
-        <div class="actions">
-          <button id="newImage" class="secondary-button" type="button">New image</button>
-          <button id="downloadButton" class="primary-button" type="button">Download PNG</button>
-        </div>
+    <section id="workspace" class="workspace hidden">
+      <div id="previewWrap" class="preview">
+        <canvas id="beforeCanvas" aria-label="Original"></canvas>
+        <canvas id="afterCanvas" class="after" aria-label="Processed"></canvas>
+        <div id="splitLine" class="split" aria-hidden="true"></div>
       </div>
+      <input id="compareSlider" class="slider" type="range" min="0" max="100" value="50" aria-label="Compare original and processed">
+      <button id="downloadButton" class="download" type="button">Download</button>
     </section>
-
-    <p class="privacy">No image upload. No analytics. No backend. Only the visible watermark is processed; invisible provenance signals are outside this tool's scope.</p>
   </main>
   <script src="./app.js" defer></script>
 </body>
