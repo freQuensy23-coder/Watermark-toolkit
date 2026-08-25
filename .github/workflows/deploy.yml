@@ -27,46 +27,51 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
-      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DEPLOY_CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DEPLOY_CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v6
 
       - name: Deploy production Worker
         id: production
-        if: ${{ env.CF_API_TOKEN != '' }}
+        if: ${{ env.DEPLOY_CF_API_TOKEN != '' }}
         uses: cloudflare/wrangler-action@v4
         with:
-          apiToken: ${{ env.CF_API_TOKEN }}
-          accountId: ${{ env.CF_ACCOUNT_ID }}
+          apiToken: ${{ env.DEPLOY_CF_API_TOKEN }}
+          accountId: ${{ env.DEPLOY_CF_ACCOUNT_ID }}
           wranglerVersion: 4.125.0
           command: deploy
 
       - name: Smoke test production Worker
-        if: ${{ env.CF_API_TOKEN != '' }}
+        if: ${{ env.DEPLOY_CF_API_TOKEN != '' }}
         env:
           DEPLOYMENT_URL: ${{ steps.production.outputs.deployment-url }}
         run: |
           URL="$(printf '%s' "$DEPLOYMENT_URL" | sed 's/ .*//')"
           case "$URL" in http*) ;; *) URL="https://$URL" ;; esac
-          for i in 1 2 3; do
-            curl --fail --silent --show-error --retry 3 "$URL" | grep -q "Gemini watermark remover"
+          ok=0
+          for i in $(seq 1 10); do
+            if curl --fail --silent --show-error "$URL" | grep -q "Gemini watermark remover"; then ok=1; break; fi
+            sleep 2
           done
+          test "$ok" = 1
           echo "Production smoke test passed: $URL" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy temporary Worker when Cloudflare secret is not configured
-        if: ${{ env.CF_API_TOKEN == '' }}
+        if: ${{ env.DEPLOY_CF_API_TOKEN == '' }}
         env:
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
-        run: npx -y wrangler@4.125.0 deploy --temporary
+        run: npx -y wrangler@4.125.0 deploy --temporary | tee "$RUNNER_TEMP/wrangler.log"
 
       - name: Smoke test temporary Worker
-        if: ${{ env.CF_API_TOKEN == '' }}
-        env:
-          OUTPUT_FILE: ${{ runner.temp }}/wrangler-output.json
+        if: ${{ env.DEPLOY_CF_API_TOKEN == '' }}
         run: |
-          URL="$(node -e 'const fs=require("fs");const xs=fs.readFileSync(process.env.OUTPUT_FILE,"utf8").trim().split(/\n+/).map(JSON.parse);const d=xs.reverse().find(x=>x.type==="deploy");if(!d||!d.targets?.[0])process.exit(2);process.stdout.write(d.targets[0]);')"
-          for i in 1 2 3; do
-            curl --fail --silent --show-error --retry 3 "$URL" | grep -q "Gemini watermark remover"
+          URL="$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/wrangler.log" | tail -1)"
+          test -n "$URL"
+          ok=0
+          for i in $(seq 1 10); do
+            if curl --fail --silent --show-error "$URL" | grep -q "Gemini watermark remover"; then ok=1; break; fi
+            sleep 2
           done
+          test "$ok" = 1
           echo "Temporary smoke test passed: $URL" >> "$GITHUB_STEP_SUMMARY"
