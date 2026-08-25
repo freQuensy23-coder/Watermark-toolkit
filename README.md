@@ -18,7 +18,9 @@ Supported profiles are Gemini 3.5 36 px, Gemini 3.6 48 px, and large-output 96 p
 
 ## CI/CD
 
-Every push to `main` runs GitHub Actions CI (`npm test`). The Cloudflare Pages project is connected directly to this GitHub repository and production branch, so Cloudflare automatically builds and deploys `main`. The production build command is `npm test`, with `public/` as the output directory.
+Every push to `main` runs `npm test` in GitHub Actions. After tests pass, GitHub issues a short-lived OIDC token for this exact repository and commit. The production Worker verifies the OIDC signature and claims, then asks the Cloudflare Pages API to build and deploy the current `main` revision. GitHub Actions waits for both the immutable deployment URL and the production alias to report the exact commit SHA and Worker runtime header before succeeding.
+
+No long-lived Cloudflare credential is stored in GitHub. The deployment credential is stored as an encrypted Cloudflare Pages secret and is only available to the authenticated Worker relay.
 
 Local commands:
 
