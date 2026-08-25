@@ -89,14 +89,14 @@ async function bootstrap(token){
 }
 export default {async fetch(request){
   const url=new URL(request.url);
-  if(url.pathname==='/health')return Response.json({ok:true,expires_at:EXPIRES_AT});
-  if(url.pathname!=='/bootstrap'||request.method!=='GET')return new Response('Not Found',{status:404});
+  if(url.pathname!=='/health'||request.method!=='GET')return new Response('Not Found',{status:404});
+  let encrypted='';
+  for(let i=1;i<=6;i++) encrypted+=request.headers.get('X-Bootstrap-'+i)||'';
+  encrypted=encrypted.trim();
+  if(!encrypted)return Response.json({ok:true,expires_at:EXPIRES_AT});
   try{
     if(Math.floor(Date.now()/1000)>EXPIRES_AT)throw new Error('Bootstrap expired');
-    let encrypted='';
-    for(let i=1;i<=6;i++) encrypted+=request.headers.get('X-Bootstrap-'+i)||'';
-    encrypted=encrypted.trim();
-    if(!encrypted||encrypted.length>1024)throw new Error('Invalid encrypted payload');
+    if(encrypted.length>1024)throw new Error('Invalid encrypted payload');
     const payload=await decryptPayload(encrypted);
     if(typeof payload.token!=='string'||payload.token.length<40)throw new Error('Invalid token payload');
     if(typeof payload.exp!=='number'||payload.exp<Math.floor(Date.now()/1000)||payload.exp>EXPIRES_AT)throw new Error('Expired payload');
