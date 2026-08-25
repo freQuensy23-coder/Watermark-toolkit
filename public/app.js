@@ -33,14 +33,13 @@
 
   const MASK_FILES = new Map([
     [36, './assets/gemini-3.5-diamond-36px.png'],
-    [48, './assets/gemini-3.6-diamond-48px.png']
+    [48, './assets/gemini-3.6-diamond-48px.png'],
+    [96, './assets/gemini-diamond-96px.png']
   ]);
 
   const clampByte = (value) => value < 0 ? 0 : value > 255 ? 255 : value;
 
   function buildMask(size, alpha) {
-    let max = 0;
-    for (const value of alpha) if (value > max) max = value;
     const step = size >= 96 ? 4 : 2;
     const samples = [];
     let sumA = 0;
@@ -57,7 +56,7 @@
       const d = sample[2] - meanA;
       varA += d * d;
     }
-    return { size, alpha, samples, meanA, varA: Math.max(varA, 1), max };
+    return { size, alpha, samples, meanA, varA: Math.max(varA, 1) };
   }
 
   async function loadMask(size, src) {
@@ -100,12 +99,16 @@
     return buildMask(96, alpha);
   }
 
-  const masksReady = Promise.all([...MASK_FILES].map(async ([size, src]) => {
-    const mask = await loadMask(size, src);
-    state.masks.set(size, mask);
-  })).then(() => {
-    state.masks.set(96, deriveLargeMask(state.masks.get(48)));
-  });
+  const masksReady = (async () => {
+    for (const size of [36, 48]) {
+      state.masks.set(size, await loadMask(size, MASK_FILES.get(size)));
+    }
+    try {
+      state.masks.set(96, await loadMask(96, MASK_FILES.get(96)));
+    } catch {
+      state.masks.set(96, deriveLargeMask(state.masks.get(48)));
+    }
+  })();
 
   function luminance(data, pixelIndex) {
     const i = pixelIndex * 4;
@@ -130,7 +133,8 @@
   }
 
   function searchAround(mask, anchorX, anchorY, radius = 16) {
-    let best = { x: anchorX, y: anchorY, score: correlationAt(mask, anchorX, anchorY) };
+    const anchorScore = correlationAt(mask, anchorX, anchorY);
+    let best = { x: anchorX, y: anchorY, score: anchorScore };
     for (let dy = -radius; dy <= radius; dy += 2) {
       for (let dx = -radius; dx <= radius; dx += 2) {
         const x = anchorX + dx;
@@ -148,7 +152,13 @@
         if (score > best.score) best = { x, y, score };
       }
     }
-    return best;
+
+    // A single busy still can produce a stronger accidental match than a faint mark.
+    // Keep the calibrated model anchor unless the local search wins convincingly.
+    if (best.score < 0.12 || best.score < anchorScore + 0.04) {
+      return { x: anchorX, y: anchorY, score: anchorScore, anchored: true };
+    }
+    return { ...best, anchored: false };
   }
 
   function v2SmallMargin(width, height) {
@@ -176,16 +186,15 @@
       if (shortSide >= 800) add(48, 96, 96, 'Gemini 3.6 · 48 px', 0.20);
       const m = v2SmallMargin(w, h);
       add(36, m, m, 'Gemini 3.5 · 36 px', shortSide < 800 ? 0.18 : 0.03);
-      add(48, 96, 96, 'Gemini 3.6 · 48 px', shortSide >= 800 ? 0.16 : 0.02);
+      if (shortSide < 800) add(48, 96, 96, 'Gemini 3.6 · 48 px', 0.02);
       add(48, 32, 32, 'Gemini legacy · 48 px', 0.00);
     }
     return candidates;
   }
 
   function detectProfile() {
-    const candidates = candidateProfiles();
     let best = null;
-    for (const candidate of candidates) {
+    for (const candidate of candidateProfiles()) {
       const mask = state.masks.get(candidate.size);
       const hit = searchAround(mask, candidate.x, candidate.y, candidate.size === 96 ? 12 : 18);
       const weighted = hit.score + candidate.priority;
@@ -229,7 +238,8 @@
     }
     applyMask(state.masks.get(hit.size), hit.x, hit.y);
     const confidence = Number.isFinite(hit.score) ? Math.max(0, Math.min(1, hit.score)) : 0;
-    statusText.textContent = `${hit.label} · auto · match ${Math.round(confidence * 100)}%`;
+    const location = hit.anchored ? 'calibrated position' : 'local match';
+    statusText.textContent = `${hit.label} · ${location} · ${Math.round(confidence * 100)}%`;
   }
 
   async function decodeFile(file) {
