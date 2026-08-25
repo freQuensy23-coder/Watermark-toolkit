@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "prepare-assets": "node scripts/prepare-assets.mjs",
-    "build-worker": "npm run prepare-assets && node scripts/build-worker.mjs",
-    "test": "npm run build-worker && node tests/test.mjs",
-    "dev": "npm run prepare-assets && wrangler dev",
-    "deploy": "npm run prepare-assets && wrangler deploy"
+    "test": "npm run prepare-assets && node tests/test.mjs",
+    "dev": "npm run prepare-assets && wrangler pages dev public",
+    "deploy": "npm run prepare-assets && wrangler pages deploy public --project-name watermark-toolkit --branch main"
   },
   "devDependencies": {
     "wrangler": "4.125.0"
