@@ -31,6 +31,11 @@ jobs:
       DEPLOY_CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Prepare pinned runtime assets
+        run: npm run prepare-assets
 
       - name: Deploy production Worker
         id: production
@@ -55,7 +60,9 @@ jobs:
             sleep 2
           done
           test "$ok" = 1
-          echo "Production smoke test passed: $URL" >> "$GITHUB_STEP_SUMMARY"
+          curl --fail --silent --show-error "$URL/app.js" | grep -q "gemini-diamond-96px.png"
+          test "$(curl --fail --silent --show-error "$URL/assets/gemini-diamond-96px.png" | wc -c)" -gt 3000
+          echo "Production smoke tests passed: $URL" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy temporary Worker when Cloudflare secret is not configured
         if: ${{ env.DEPLOY_CF_API_TOKEN == '' }}
@@ -74,4 +81,6 @@ jobs:
             sleep 2
           done
           test "$ok" = 1
-          echo "Temporary smoke test passed: $URL" >> "$GITHUB_STEP_SUMMARY"
+          curl --fail --silent --show-error "$URL/app.js" | grep -q "gemini-diamond-96px.png"
+          test "$(curl --fail --silent --show-error "$URL/assets/gemini-diamond-96px.png" | wc -c)" -gt 3000
+          echo "Temporary smoke tests passed: $URL" >> "$GITHUB_STEP_SUMMARY"
