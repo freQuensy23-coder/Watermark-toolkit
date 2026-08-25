@@ -1,49 +1,43 @@
 # Watermark Toolkit
 
-A small, privacy-first web tool for removing the **visible Gemini diamond watermark** from original Gemini images. Processing is performed entirely with Canvas APIs in the browser: the image is never uploaded to the Worker or any third-party service.
+Privacy-first web tool for removing the **visible Gemini diamond watermark** from original Gemini images. Processing happens entirely in the browser with Canvas: image bytes are never uploaded to Cloudflare or any third party.
 
-## Live architecture
+## Live
 
-Cloudflare Workers Static Assets serves `public/`. There is no image-processing backend. `public/app.js` loads local alpha masks and applies reverse alpha blending per RGB channel:
+https://watermark-toolkit.pages.dev
+
+The site runs through Cloudflare's Worker runtime using Pages advanced mode (`public/_worker.js`). The Worker serves the static application through the `ASSETS` binding and adds a runtime verification header; image processing stays client-side.
+
+## How it works
+
+The visible watermark is a white alpha-blended overlay. Using the calibrated per-pixel alpha mask, each RGB channel is recovered with:
 
 `original = (watermarked - alpha * 255) / (1 - alpha)`
 
-The app supports Gemini 3.5 36 px, Gemini 3.6 48 px, and large-output 96 px geometry. It automatically searches around known bottom-right geometry and also provides a manual click fallback for unusual placement.
-
-## Development
-
-```bash
-npm test
-npm install
-npm run dev
-```
-
-## Deployment
-
-```bash
-npm install
-npm run deploy
-```
-
-Cloudflare configuration is in `wrangler.jsonc`. The production Worker is named `watermark-toolkit`.
+Supported profiles are Gemini 3.5 36 px, Gemini 3.6 48 px, and large-output 96 px. Auto mode searches the expected bottom-right geometry; manual positioning is available for unusual placements.
 
 ## CI/CD
 
-`.github/workflows/deploy.yml` runs checks and deploys every push to `main` using `cloudflare/wrangler-action@v4` and Wrangler 4.125.0. The repository needs one Actions secret:
+Every push to `main` runs GitHub Actions CI (`npm test`). The Cloudflare Pages project is connected directly to this GitHub repository and production branch, so Cloudflare automatically builds and deploys `main`. The production build command is `npm test`, with `public/` as the output directory.
 
-- `CLOUDFLARE_API_TOKEN`
+Local commands:
 
-The token must have permission to deploy Workers Scripts for the target account. Never commit the token itself.
+```bash
+npm install
+npm test
+npm run dev
+npm run deploy
+```
 
 ## Privacy
 
-- no upload endpoint
+- no image upload endpoint
 - no analytics
 - no cookies or local storage
 - no runtime CDN dependencies
 - local PNG/JPEG/WebP decoding and PNG export
 
-This project targets the visible overlay only. It does not claim to remove or verify invisible provenance signals such as SynthID.
+This tool targets the visible overlay only. It does not remove or claim to remove invisible provenance signals such as SynthID.
 
 ## Credits and license
 
