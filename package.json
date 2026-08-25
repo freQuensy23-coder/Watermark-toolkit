@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "prepare-assets": "node scripts/prepare-assets.mjs",
-    "test": "npm run prepare-assets && node tests/test.mjs",
+    "build-worker": "npm run prepare-assets && node scripts/build-worker.mjs",
+    "test": "npm run build-worker && node tests/test.mjs",
     "dev": "npm run prepare-assets && wrangler dev",
     "deploy": "npm run prepare-assets && wrangler deploy"
   },
