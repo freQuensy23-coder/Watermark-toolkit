@@ -7,7 +7,7 @@ Live: https://watermark-toolkit.pages.dev
 ## Modes
 
 - **Single** — process one image, compare before/after, download PNG.
-- **Bulk** — process multiple images and download the results as one ZIP.
+- **Bulk** — process multiple images, preview every processed result, and download the results as one ZIP.
 
 ## Metadata
 
