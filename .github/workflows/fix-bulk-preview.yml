@@ -1,0 +1,21 @@
+name: Fix bulk preview
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/fix-bulk-preview.mjs
+      - .github/workflows/fix-bulk-preview.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: node scripts/fix-bulk-preview.mjs
