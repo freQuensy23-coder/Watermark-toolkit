@@ -21,6 +21,8 @@
     </label>
 
     <section id="workspace" class="workspace hidden">
+      <div id="bulkPreview" class="bulk-preview hidden" aria-label="Bulk preview"></div>
+
       <div id="singlePreview">
         <div id="previewWrap" class="preview">
           <canvas id="beforeCanvas" aria-label="Original"></canvas>
@@ -30,27 +32,30 @@
         <input id="compareSlider" class="slider" type="range" min="0" max="100" value="50" aria-label="Compare original and processed">
       </div>
 
-      <div id="bulkPreview" class="bulk-preview hidden" aria-label="Bulk preview"></div>
       <button id="downloadButton" class="download" type="button">Download</button>
     </section>
 
     <div class="settings">
-      <select id="metadataMode" aria-label="Metadata">
-        <option value="set" selected>Set metadata</option>
-        <option value="strip">Strip metadata</option>
-      </select>
-      <input id="locationName" value="Tel Aviv, Israel" aria-label="Location" placeholder="Location">
-      <input id="latitude" type="number" step="any" value="32.0853" aria-label="Latitude" placeholder="Latitude">
-      <input id="longitude" type="number" step="any" value="34.7818" aria-label="Longitude" placeholder="Longitude">
-      <select id="devicePreset" aria-label="Device">
-        <option value="iphone17pro" selected>iPhone 17 Pro</option>
-        <option value="fold7">Samsung Galaxy Z Fold7</option>
-        <option value="sonya7iv">Sony α7 IV</option>
-        <option value="canonr5">Canon EOS R5</option>
-        <option value="custom">Custom</option>
-      </select>
-      <input id="customMake" class="hidden" aria-label="Make" placeholder="Make">
-      <input id="customModel" class="hidden" aria-label="Model" placeholder="Model">
+      <div class="metadata-row">
+        <select id="metadataMode" aria-label="Metadata">
+          <option value="set" selected>Set metadata</option>
+          <option value="strip">Strip metadata</option>
+        </select>
+        <select id="devicePreset" aria-label="Device">
+          <option value="iphone17pro" selected>iPhone 17 Pro</option>
+          <option value="fold7">Samsung Galaxy Z Fold7</option>
+          <option value="sonya7iv">Sony α7 IV</option>
+          <option value="canonr5">Canon EOS R5</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input id="customMake" class="hidden" aria-label="Make" placeholder="Make">
+        <input id="customModel" class="hidden" aria-label="Model" placeholder="Model">
+      </div>
+      <div class="location-row">
+        <input id="locationName" value="Tel Aviv, Israel" aria-label="Location" placeholder="Location">
+        <input id="latitude" type="number" step="any" value="32.0853" aria-label="Latitude" placeholder="Latitude">
+        <input id="longitude" type="number" step="any" value="34.7818" aria-label="Longitude" placeholder="Longitude">
+      </div>
     </div>
   </main>
   <script src="./app.js" defer></script>
