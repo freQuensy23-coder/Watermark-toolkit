@@ -31,6 +31,7 @@
     singleName: 'image',
     singleReady: false,
     bulk: [],
+    bulkSelected: -1,
     processing: false,
     masks: new Map()
   };
@@ -245,39 +246,68 @@
     workspace.classList.remove('hidden');
   }
 
-  function imageDataToCanvas(imageData) {
-    const canvas = document.createElement('canvas');
-    canvas.width = imageData.width;
-    canvas.height = imageData.height;
-    canvas.getContext('2d').putImageData(imageData, 0, 0);
-    return canvas;
-  }
-
-  function appendBulkPreview(source, output) {
+  function appendBulkPreview(output, index) {
     const item = document.createElement('div');
     item.className = 'bulk-item';
-    const before = document.createElement('canvas');
-    const after = document.createElement('canvas');
-    const split = document.createElement('div');
-    after.className = 'bulk-after';
-    split.className = 'bulk-split';
+    item.dataset.index = String(index);
+    item.tabIndex = 0;
+    item.setAttribute('role', 'button');
+    item.setAttribute('aria-label', `Preview image ${index + 1}`);
 
-    const targetWidth = Math.min(420, source.width);
-    const scale = targetWidth / source.width;
-    const targetHeight = Math.max(1, Math.round(source.height * scale));
-    before.width = after.width = Math.max(1, Math.round(targetWidth));
-    before.height = after.height = targetHeight;
+    const canvas = document.createElement('canvas');
+    const targetWidth = Math.min(220, output.width);
+    const scale = targetWidth / output.width;
+    canvas.width = Math.max(1, Math.round(targetWidth));
+    canvas.height = Math.max(1, Math.round(output.height * scale));
+    const sourceCanvas = document.createElement('canvas');
+    sourceCanvas.width = output.width;
+    sourceCanvas.height = output.height;
+    sourceCanvas.getContext('2d').putImageData(output, 0, 0);
+    canvas.getContext('2d').drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
+    item.append(canvas);
 
-    const sourceCanvas = imageDataToCanvas(source);
-    const outputCanvas = imageDataToCanvas(output);
-    before.getContext('2d').drawImage(sourceCanvas, 0, 0, before.width, before.height);
-    after.getContext('2d').drawImage(outputCanvas, 0, 0, after.width, after.height);
-    item.append(before, after, split);
+    const select = () => selectBulkPreview(index);
+    item.addEventListener('click', select);
+    item.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        select();
+      }
+    });
     bulkPreview.append(item);
   }
 
   function clearBulkPreview() {
     bulkPreview.replaceChildren();
+    state.bulkSelected = -1;
+  }
+
+  async function selectBulkPreview(index) {
+    const item = state.bulk[index];
+    if (!item || state.mode !== 'bulk') return;
+    state.bulkSelected = index;
+    for (const element of bulkPreview.children) {
+      element.classList.toggle('selected', Number(element.dataset.index) === index);
+    }
+
+    const [sourceDecoded, outputDecoded] = await Promise.all([
+      fileToImageData(item.file),
+      fileToImageData(item.cleanPng)
+    ]);
+    if (state.mode !== 'bulk' || state.bulkSelected !== index) return;
+
+    const source = sourceDecoded.imageData;
+    const output = outputDecoded.imageData;
+    beforeCanvas.width = afterCanvas.width = source.width;
+    beforeCanvas.height = afterCanvas.height = source.height;
+    beforeCtx.putImageData(source, 0, 0);
+    afterCtx.putImageData(output, 0, 0);
+    compareSlider.value = '50';
+    afterCanvas.style.clipPath = 'inset(0 0 0 50%)';
+    splitLine.style.left = '50%';
+    singlePreview.classList.remove('hidden');
+    bulkPreview.classList.remove('hidden');
+    workspace.classList.remove('hidden');
   }
 
   async function fileToImageData(file) {
@@ -466,18 +496,23 @@
         downloadButton.textContent = 'Download';
       } else {
         uploadLabel.textContent = `${accepted.length} images`;
-        const results = [];
+        state.bulk = [];
+        state.bulkSelected = -1;
+        state.singleReady = false;
         singlePreview.classList.add('hidden');
         bulkPreview.classList.remove('hidden');
+        workspace.classList.remove('hidden');
         for (let i = 0; i < accepted.length; i += 1) {
           downloadButton.textContent = `${i + 1}/${accepted.length}`;
           const result = await processFile(accepted[i]);
-          appendBulkPreview(result.source, result.output);
-          results.push({ name: baseName(accepted[i].name), cleanPng: result.cleanPng });
+          state.bulk.push({
+            name: baseName(accepted[i].name),
+            file: accepted[i],
+            cleanPng: result.cleanPng
+          });
+          appendBulkPreview(result.output, i);
         }
-        state.bulk = results;
-        state.singleReady = false;
-        workspace.classList.remove('hidden');
+        if (state.bulk.length) await selectBulkPreview(0);
         downloadButton.textContent = 'Download ZIP';
       }
     } finally {
@@ -574,6 +609,7 @@
     state.mode = mode;
     state.singleReady = false;
     state.bulk = [];
+    state.bulkSelected = -1;
     singleMode.classList.toggle('active', mode === 'single');
     bulkMode.classList.toggle('active', mode === 'bulk');
     fileInput.multiple = mode === 'bulk';
