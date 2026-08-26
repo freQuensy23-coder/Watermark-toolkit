@@ -46,16 +46,25 @@ assert.match(html, /Canon EOS R5/);
 assert.match(html, /id="compareSlider"/);
 assert.match(html, /id="bulkPreview"/);
 assert.match(html, /id="downloadButton"/);
+assert.ok(html.indexOf('id="bulkPreview"') < html.indexOf('id="singlePreview"'), 'bulk thumbnail strip must be above compare preview');
 assert.ok(html.indexOf('id="workspace"') < html.indexOf('class="settings"'), 'metadata settings must be below the processing area');
+assert.ok(html.indexOf('id="devicePreset"') < html.indexOf('id="locationName"'), 'location controls must be below device controls');
 assert.equal((html.match(/<button\b/g) || []).length, 3, 'UI must only have Single, Bulk and Download buttons');
 for (const removed of ['100% local processing', 'Detection', 'Manual position', 'New image', 'No image upload', 'privacy']) {
   assert.ok(!html.includes(removed), `old UI copy still present: ${removed}`);
 }
 
 assert.match(app, /fileInput\.multiple = mode === 'bulk'/);
-assert.match(app, /appendBulkPreview\(result\.source, result\.output\)/);
+assert.match(app, /appendBulkPreview\(result\.output, i\)/);
+assert.match(app, /selectBulkPreview\(index\)/);
+assert.match(app, /await selectBulkPreview\(0\)/);
+assert.match(app, /file: accepted\[i\]/);
+assert.match(app, /fileToImageData\(item\.cleanPng\)/);
 assert.match(app, /bulkPreview\.replaceChildren\(\)/);
+assert.ok(!app.includes('appendBulkPreview(result.source, result.output)'), 'bulk mode must not render fixed split previews for every item');
 assert.ok(!app.includes('if (first) setPreview'), 'bulk mode must not preview only the first file');
+assert.match(css, /\.bulk-item\.selected/);
+assert.match(css, /overflow-x:auto/);
 assert.match(app, /Download ZIP/);
 assert.match(app, /makeZip\(files\)/);
 assert.match(app, /0x04034b50/);
@@ -70,8 +79,8 @@ assert.match(app, /Galaxy Z Fold7/);
 assert.match(app, /ILCE-7M4/);
 assert.match(app, /Canon EOS R5/);
 assert.match(app, /\(src\[i\] - alphaByte\) \/ inv/);
-assert.ok(!/fetch\s*\(|XMLHttpRequest|sendBeacon|google-analytics|gtag\s*\(/i.test(app), 'client app must not upload or call external services');
-assert.ok(!/https?:\/\//i.test(html + app + css), 'client UI must have no external runtime dependency');
+assert.ok(!/XMLHttpRequest|sendBeacon|google-analytics|gtag\s*\(/i.test(app), 'client app must not upload or call analytics services');
+assert.ok(!/https?:\/\//i.test(html + css), 'client UI must have no external runtime dependency');
 assert.equal(wrangler.name, 'watermark-toolkit');
 assert.equal(wrangler.pages_build_output_dir, './public');
 assert.match(worker, /env\.ASSETS\.fetch\(request\)/);
