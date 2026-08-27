@@ -19,6 +19,18 @@ jobs:
         with:
           node-version: 24
       - run: node scripts/integrate-synthid.mjs
+      - name: Update legacy bulk-preview assertion
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = 'tests/test.mjs';
+          let text = fs.readFileSync(path, 'utf8');
+          text = text.replace(
+            "assert.match(app, /appendBulkPreview\\(result\\.output, i\\)/);",
+            "assert.match(app, /appendBulkPreview\\(result\\.output, i, result\\.synth\\)/);"
+          );
+          fs.writeFileSync(path, text);
+          NODE
       - run: npm test
       - name: Commit integrated application
         run: |
