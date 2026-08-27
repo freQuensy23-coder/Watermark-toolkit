@@ -1,0 +1,30 @@
+name: Integrate SynthID pipeline
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/integrate-synthid.mjs
+      - .github/workflows/integrate-synthid.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: node scripts/integrate-synthid.mjs
+      - run: npm test
+      - name: Commit integrated application
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git rm .github/workflows/integrate-synthid.yml scripts/integrate-synthid.mjs
+          git add public/app.js public/styles.css README.md tests/test.mjs
+          git commit -m 'feat: integrate automatic SynthID detection and disruption'
+          git push
