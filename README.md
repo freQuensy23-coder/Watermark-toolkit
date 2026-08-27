@@ -1,6 +1,6 @@
 # Watermark Toolkit
 
-Client-side Gemini visible-watermark and SynthID processing toolkit.
+Client-side Gemini visible-watermark remover.
 
 Live: https://watermark-toolkit.pages.dev
 
@@ -8,12 +8,6 @@ Live: https://watermark-toolkit.pages.dev
 
 - **Single** — process one image, compare before/after, download PNG.
 - **Bulk** — process multiple images, preview every processed result, and download the results as one ZIP.
-
-## SynthID
-
-Single and Bulk run a local phase detector against the published Gemini SynthID carrier families. When detected, the browser automatically applies targeted carrier-phase disruption plus adaptive resampling/compression passes and re-runs the local detector before export. The selected Bulk item shows its SynthID status; thumbnails are marked when SynthID was detected on input. If the local detector is still positive after all fallback passes, export is blocked rather than returning a known-positive file.
-
-Detector reference data and carrier research are derived from **reverse-SynthID by Alosh Denny — github.com/aloshdenny/reverse-SynthID** and are used under that project's Research License. This repository does not include Google's private verifier.
 
 ## Metadata
 
