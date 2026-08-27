@@ -369,6 +369,34 @@
       passes = 3;
     }
 
+    if (after.detected) {
+      output = await disruptionPass(output, {
+        shift: Math.PI * 0.83,
+        maxAmplitude: 9.5,
+        noise: 1.15,
+        seed: 71,
+        squeeze: 0.74,
+        jpeg: 0.82,
+        allSets: true
+      });
+      after = detect(output);
+      passes = 4;
+    }
+
+    if (after.detected) {
+      output = await disruptionPass(output, {
+        shift: Math.PI * 0.67,
+        maxAmplitude: 12,
+        noise: 1.6,
+        seed: 97,
+        squeeze: 0.66,
+        jpeg: 0.76,
+        allSets: true
+      });
+      after = detect(output);
+      passes = 5;
+    }
+
     return { output, before, after, passes, removed: before.detected && !after.detected };
   }
 

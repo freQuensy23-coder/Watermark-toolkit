@@ -31,6 +31,7 @@
     mode: 'single',
     singleName: 'image',
     singleReady: false,
+    singleSynth: null,
     bulk: [],
     bulkSelected: -1,
     processing: false,
@@ -523,6 +524,7 @@
         const result = await processFile(file);
         state.singleName = baseName(file.name);
         state.singleReady = true;
+        state.singleSynth = result.synth;
         state.bulk = [];
         setSinglePreview(result.source, result.output, result.synth);
         downloadButton.textContent = 'Download';
@@ -531,6 +533,7 @@
         state.bulk = [];
         state.bulkSelected = -1;
         state.singleReady = false;
+        state.singleSynth = null;
         singlePreview.classList.add('hidden');
         bulkPreview.classList.remove('hidden');
         workspace.classList.remove('hidden');
@@ -550,7 +553,10 @@
       }
     } finally {
       state.processing = false;
-      downloadButton.disabled = false;
+      const synthBlocked = state.mode === 'single'
+        ? Boolean(state.singleSynth?.after?.detected)
+        : state.bulk.some((item) => item.synth?.after?.detected);
+      downloadButton.disabled = synthBlocked;
       fileInput.value = '';
     }
   }
@@ -641,6 +647,7 @@
   function setMode(mode) {
     state.mode = mode;
     state.singleReady = false;
+    state.singleSynth = null;
     state.bulk = [];
     state.bulkSelected = -1;
     singleMode.classList.toggle('active', mode === 'single');
@@ -696,12 +703,12 @@
     try {
       const meta = currentMetadata();
       if (state.mode === 'single') {
-        if (!state.singleReady) return;
+        if (!state.singleReady || state.singleSynth?.after?.detected) return;
         const cleanPng = await canvasToPng(afterCanvas);
         const output = await applyMetadata(cleanPng, meta);
         downloadBlob(output, `${state.singleName}-clean.png`);
       } else {
-        if (!state.bulk.length) return;
+        if (!state.bulk.length || state.bulk.some((item) => item.synth?.after?.detected)) return;
         const files = [];
         const used = new Map();
         for (const item of state.bulk) {
