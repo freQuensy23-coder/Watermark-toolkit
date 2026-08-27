@@ -22,6 +22,7 @@
   const compareSlider = $('compareSlider');
   const splitLine = $('splitLine');
   const downloadButton = $('downloadButton');
+  const synthidStatus = $('synthidStatus');
 
   const beforeCtx = beforeCanvas.getContext('2d', { willReadFrequently: true });
   const afterCtx = afterCanvas.getContext('2d', { willReadFrequently: true });
@@ -233,7 +234,26 @@
     return new ImageData(out, width, height);
   }
 
-  function setSinglePreview(source, output) {
+  function setSynthidStatus(synth) {
+    if (!synth) {
+      synthidStatus.textContent = '';
+      synthidStatus.className = 'synthid-status hidden';
+      return;
+    }
+    synthidStatus.className = 'synthid-status';
+    if (!synth.before?.detected) {
+      synthidStatus.textContent = 'SynthID: not detected';
+      synthidStatus.classList.add('clear');
+    } else if (!synth.after?.detected) {
+      synthidStatus.textContent = 'SynthID: removed';
+      synthidStatus.classList.add('clear');
+    } else {
+      synthidStatus.textContent = 'SynthID: detected';
+      synthidStatus.classList.add('detected');
+    }
+  }
+
+  function setSinglePreview(source, output, synth) {
     beforeCanvas.width = afterCanvas.width = source.width;
     beforeCanvas.height = afterCanvas.height = source.height;
     beforeCtx.putImageData(source, 0, 0);
@@ -244,9 +264,10 @@
     singlePreview.classList.remove('hidden');
     bulkPreview.classList.add('hidden');
     workspace.classList.remove('hidden');
+    setSynthidStatus(synth);
   }
 
-  function appendBulkPreview(output, index) {
+  function appendBulkPreview(output, index, synth) {
     const item = document.createElement('div');
     item.className = 'bulk-item';
     item.dataset.index = String(index);
@@ -265,6 +286,12 @@
     sourceCanvas.getContext('2d').putImageData(output, 0, 0);
     canvas.getContext('2d').drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
     item.append(canvas);
+    if (synth?.before?.detected) {
+      const badge = document.createElement('span');
+      badge.className = synth.after?.detected ? 'synthid-badge detected' : 'synthid-badge';
+      badge.textContent = synth.after?.detected ? 'SynthID' : 'SynthID ✓';
+      item.append(badge);
+    }
 
     const select = () => selectBulkPreview(index);
     item.addEventListener('click', select);
@@ -308,6 +335,7 @@
     singlePreview.classList.remove('hidden');
     bulkPreview.classList.remove('hidden');
     workspace.classList.remove('hidden');
+    setSynthidStatus(item.synth);
   }
 
   async function fileToImageData(file) {
@@ -466,10 +494,14 @@
 
   async function processFile(file) {
     const decoded = await fileToImageData(file);
-    const output = cleanImageData(decoded.imageData, decoded.canvas.width, decoded.canvas.height);
+    const visibleClean = cleanImageData(decoded.imageData, decoded.canvas.width, decoded.canvas.height);
+    const synth = globalThis.SynthIDToolkit
+      ? await globalThis.SynthIDToolkit.process(visibleClean)
+      : { output: visibleClean, before: { detected: false }, after: { detected: false }, passes: 0 };
+    const output = synth.output;
     decoded.ctx.putImageData(output, 0, 0);
     const cleanPng = await canvasToPng(decoded.canvas);
-    return { source: decoded.imageData, output, cleanPng };
+    return { source: decoded.imageData, output, cleanPng, synth };
   }
 
   function baseName(name) {
@@ -492,7 +524,7 @@
         state.singleName = baseName(file.name);
         state.singleReady = true;
         state.bulk = [];
-        setSinglePreview(result.source, result.output);
+        setSinglePreview(result.source, result.output, result.synth);
         downloadButton.textContent = 'Download';
       } else {
         uploadLabel.textContent = `${accepted.length} images`;
@@ -508,9 +540,10 @@
           state.bulk.push({
             name: baseName(accepted[i].name),
             file: accepted[i],
-            cleanPng: result.cleanPng
+            cleanPng: result.cleanPng,
+            synth: result.synth
           });
-          appendBulkPreview(result.output, i);
+          appendBulkPreview(result.output, i, result.synth);
         }
         if (state.bulk.length) await selectBulkPreview(0);
         downloadButton.textContent = 'Download ZIP';
@@ -616,6 +649,7 @@
     uploadLabel.textContent = mode === 'bulk' ? 'Choose images' : 'Choose image';
     downloadButton.textContent = mode === 'bulk' ? 'Download ZIP' : 'Download';
     workspace.classList.add('hidden');
+    setSynthidStatus(null);
     singlePreview.classList.remove('hidden');
     bulkPreview.classList.add('hidden');
     clearBulkPreview();

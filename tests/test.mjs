@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import vm from 'node:vm';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const bytes = (path) => fs.readFileSync(path);
@@ -28,6 +29,8 @@ for (const [path, size, sha] of assets) {
 const html = read('public/index.html');
 const app = read('public/app.js');
 const css = read('public/styles.css');
+const synthid = read('public/synthid.js');
+const synthidData = read('public/synthid-data.js');
 const worker = read('public/_worker.js');
 const buildMeta = JSON.parse(read('public/build.json'));
 const wrangler = JSON.parse(read('wrangler.jsonc'));
@@ -46,6 +49,9 @@ assert.match(html, /Canon EOS R5/);
 assert.match(html, /id="compareSlider"/);
 assert.match(html, /id="bulkPreview"/);
 assert.match(html, /id="downloadButton"/);
+assert.match(html, /id="synthidStatus"/);
+assert.match(html, /synthid-data\.js/);
+assert.match(html, /synthid\.js/);
 assert.ok(html.indexOf('id="bulkPreview"') < html.indexOf('id="singlePreview"'), 'bulk thumbnail strip must be above compare preview');
 assert.ok(html.indexOf('id="workspace"') < html.indexOf('class="settings"'), 'metadata settings must be below the processing area');
 assert.ok(html.indexOf('id="devicePreset"') < html.indexOf('id="locationName"'), 'location controls must be below device controls');
@@ -55,7 +61,7 @@ for (const removed of ['100% local processing', 'Detection', 'Manual position', 
 }
 
 assert.match(app, /fileInput\.multiple = mode === 'bulk'/);
-assert.match(app, /appendBulkPreview\(result\.output, i\)/);
+assert.match(app, /appendBulkPreview\(result\.output, i, result\.synth\)/);
 assert.match(app, /selectBulkPreview\(index\)/);
 assert.match(app, /await selectBulkPreview\(0\)/);
 assert.match(app, /file: accepted\[i\]/);
@@ -66,6 +72,13 @@ assert.ok(!app.includes('if (first) setPreview'), 'bulk mode must not preview on
 assert.match(css, /\.bulk-item\.selected/);
 assert.match(css, /overflow-x:auto/);
 assert.match(app, /Download ZIP/);
+assert.match(app, /SynthIDToolkit\.process/);
+assert.match(app, /SynthID: removed/);
+assert.match(app, /synth: result\.synth/);
+assert.match(synthid, /darkRefPhases/);
+assert.match(synthid, /phaseMatch/);
+assert.match(synthid, /disruptionPass/);
+assert.match(synthidData, /darkRefPhases/);
 assert.match(app, /makeZip\(files\)/);
 assert.match(app, /0x04034b50/);
 assert.match(app, /0x02014b50/);
@@ -90,6 +103,8 @@ assert.ok(typeof buildMeta.commit === 'string' && buildMeta.commit.length > 0);
 
 for (const file of [
   'public/app.js',
+  'public/synthid-data.js',
+  'public/synthid.js',
   'public/_worker.js',
   'scripts/prepare-assets.mjs',
   'scripts/write-build-meta.mjs'
@@ -98,3 +113,31 @@ for (const file of [
 }
 
 console.log('All checks passed.');
+
+// Pure-math SynthID checks without browser APIs.
+globalThis.window = globalThis;
+vm.runInThisContext(synthidData, { filename: 'synthid-data.js' });
+vm.runInThisContext(synthid, { filename: 'synthid.js' });
+const math = globalThis.SynthIDToolkit._math;
+{
+  const re = Float64Array.from([1, 2, 3, 4, 5, 6, 7, 8]);
+  const im = new Float64Array(8);
+  const original = Array.from(re);
+  math.fft1d(re, im, false);
+  math.fft1d(re, im, true);
+  for (let i = 0; i < original.length; i += 1) assert.ok(Math.abs(re[i] - original[i]) < 1e-8);
+}
+{
+  const size = 512;
+  const spec = { re: new Float64Array(size * size), im: new Float64Array(size * size) };
+  const data = globalThis.SYNTHID_DETECTOR_DATA;
+  for (let i = 0; i < math.DARK.length; i += 1) {
+    const [fy, fx] = math.DARK[i];
+    const phase = data.darkRefPhases[i];
+    const index = ((fy % size + size) % size) * size + ((fx % size + size) % size);
+    spec.re[index] = Math.cos(phase);
+    spec.im[index] = Math.sin(phase);
+  }
+  assert.ok(math.phaseMatch(spec, math.DARK, data.darkRefPhases, size) > 0.999999);
+}
+console.log('SynthID phase math checks passed.');
