@@ -1,0 +1,30 @@
+name: Harden SynthID export
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/harden-synthid.mjs
+      - .github/workflows/harden-synthid.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: node scripts/harden-synthid.mjs
+      - run: npm test
+      - name: Commit hardened pipeline
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git rm .github/workflows/harden-synthid.yml scripts/harden-synthid.mjs
+          git add public/app.js public/synthid.js tests/test.mjs
+          git commit -m 'fix: block export while SynthID remains detected'
+          git push
