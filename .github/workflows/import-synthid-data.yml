@@ -1,0 +1,55 @@
+name: Import SynthID detector data
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/import-synthid-data.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Extract compact detector reference data
+        run: |
+          python - <<'PY'
+          import json, pickle, urllib.request, pathlib
+          url='https://raw.githubusercontent.com/aloshdenny/reverse-SynthID/main/artifacts/codebook/robust_codebook.pkl'
+          path='/tmp/robust_codebook.pkl'
+          urllib.request.urlretrieve(url,path)
+          with open(path,'rb') as f:
+              cb=pickle.load(f)
+          refs=cb.get('carrier_refs',{})
+          def arr(name):
+              v=refs.get(name)
+              return [float(x) for x in v.tolist()] if hasattr(v,'tolist') else [float(x) for x in (v or [])]
+          payload={
+              'source':'reverse-SynthID/aloshdenny robust_codebook.pkl',
+              'imageSize':int(cb.get('image_size',512)),
+              'darkRefPhases':arr('dark_ref_phases'),
+              'whiteRefPhases':arr('white_ref_phases'),
+              'threshold':0.80,
+          }
+          pathlib.Path('public/synthid-data.js').write_text(
+              'window.SYNTHID_DETECTOR_DATA = '+json.dumps(payload,separators=(',',':'))+';\n',
+              encoding='utf-8'
+          )
+          print({k:(len(v) if isinstance(v,list) else v) for k,v in payload.items() if k!='source'})
+          if len(payload['darkRefPhases']) < 20 or len(payload['whiteRefPhases']) < 10:
+              raise SystemExit('Unexpected detector reference data')
+          PY
+      - name: Commit compact data and remove one-shot workflow
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git rm .github/workflows/import-synthid-data.yml
+          git add public/synthid-data.js
+          git commit -m 'feat: add compact SynthID detector reference data'
+          git push
