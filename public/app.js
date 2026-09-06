@@ -5,6 +5,8 @@
   const singleMode = $('singleMode');
   const bulkMode = $('bulkMode');
   const metadataMode = $('metadataMode');
+  const removeWatermark = $('removeWatermark');
+  const processingStatus = $('processingStatus');
   const locationName = $('locationName');
   const latitude = $('latitude');
   const longitude = $('longitude');
@@ -28,6 +30,7 @@
 
   const state = {
     mode: 'single',
+    files: [],
     singleName: 'image',
     singleReady: false,
     bulk: [],
@@ -111,7 +114,15 @@
     return buildMask(96, alpha);
   }
 
-  const masksReady = (async () => {
+  let masksReady;
+  function ensureMasks() {
+    return masksReady ||= loadMasks().catch((error) => {
+      masksReady = null;
+      throw error;
+    });
+  }
+
+  async function loadMasks() {
     state.masks.set(36, await loadMask(36, MASK_FILES.get(36)));
     state.masks.set(48, await loadMask(48, MASK_FILES.get(48)));
     try {
@@ -119,7 +130,7 @@
     } catch {
       state.masks.set(96, deriveLargeMask(state.masks.get(48)));
     }
-  })();
+  }
 
   function luminance(data, pixelIndex) {
     const i = pixelIndex * 4;
@@ -464,9 +475,11 @@
     return new Blob([png.slice(0, insertAt), exif, png.slice(insertAt)], { type: 'image/png' });
   }
 
-  async function processFile(file) {
+  async function processFile(file, shouldRemoveWatermark) {
     const decoded = await fileToImageData(file);
-    const output = cleanImageData(decoded.imageData, decoded.canvas.width, decoded.canvas.height);
+    const output = shouldRemoveWatermark
+      ? cleanImageData(decoded.imageData, decoded.canvas.width, decoded.canvas.height)
+      : decoded.imageData;
     decoded.ctx.putImageData(output, 0, 0);
     const cleanPng = await canvasToPng(decoded.canvas);
     return { source: decoded.imageData, output, cleanPng };
@@ -479,16 +492,22 @@
   async function handleFiles(files) {
     const accepted = [...files].filter((file) => /^image\/(png|jpeg|webp)$/i.test(file.type));
     if (!accepted.length || state.processing) return;
-    await masksReady;
     state.processing = true;
+    const shouldRemoveWatermark = removeWatermark.checked;
+    state.files = state.mode === 'single' ? accepted.slice(0, 1) : accepted;
+    state.singleReady = false;
+    state.bulk = [];
+    processingStatus.textContent = '';
+    for (const control of [removeWatermark, singleMode, bulkMode, fileInput]) control.disabled = true;
     downloadButton.disabled = true;
     workspace.classList.add('hidden');
     clearBulkPreview();
     try {
+      if (shouldRemoveWatermark) await ensureMasks();
       if (state.mode === 'single') {
         const file = accepted[0];
         uploadLabel.textContent = file.name;
-        const result = await processFile(file);
+        const result = await processFile(file, shouldRemoveWatermark);
         state.singleName = baseName(file.name);
         state.singleReady = true;
         state.bulk = [];
@@ -504,7 +523,7 @@
         workspace.classList.remove('hidden');
         for (let i = 0; i < accepted.length; i += 1) {
           downloadButton.textContent = `${i + 1}/${accepted.length}`;
-          const result = await processFile(accepted[i]);
+          const result = await processFile(accepted[i], shouldRemoveWatermark);
           state.bulk.push({
             name: baseName(accepted[i].name),
             file: accepted[i],
@@ -515,7 +534,14 @@
         if (state.bulk.length) await selectBulkPreview(0);
         downloadButton.textContent = 'Download ZIP';
       }
+    } catch (error) {
+      console.error(error);
+      state.singleReady = false;
+      state.bulk = [];
+      workspace.classList.add('hidden');
+      processingStatus.textContent = 'Could not process images. Try again or turn off Remove watermark.';
     } finally {
+      for (const control of [removeWatermark, singleMode, bulkMode, fileInput]) control.disabled = false;
       state.processing = false;
       downloadButton.disabled = false;
       fileInput.value = '';
@@ -606,6 +632,9 @@
   }
 
   function setMode(mode) {
+    if (state.processing) return;
+    state.files = [];
+    processingStatus.textContent = '';
     state.mode = mode;
     state.singleReady = false;
     state.bulk = [];
@@ -632,6 +661,7 @@
 
   singleMode.addEventListener('click', () => setMode('single'));
   bulkMode.addEventListener('click', () => setMode('bulk'));
+  removeWatermark.addEventListener('change', () => handleFiles(state.files));
   metadataMode.addEventListener('change', updateMetadataControls);
   devicePreset.addEventListener('change', updateMetadataControls);
   fileInput.addEventListener('change', () => handleFiles(fileInput.files || []));
@@ -687,8 +717,4 @@
   });
 
   updateMetadataControls();
-  masksReady.catch((error) => {
-    console.error(error);
-    downloadButton.disabled = true;
-  });
 })();

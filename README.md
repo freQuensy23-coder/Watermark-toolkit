@@ -1,6 +1,6 @@
 # Watermark Toolkit
 
-Client-side Gemini visible-watermark remover.
+Client-side image metadata editor with optional Gemini visible-watermark removal.
 
 Live: https://watermark-toolkit.pages.dev
 
@@ -8,6 +8,10 @@ Live: https://watermark-toolkit.pages.dev
 
 - **Single** — process one image, compare before/after, download PNG.
 - **Bulk** — process multiple images, preview every processed result, and download the results as one ZIP.
+
+## Watermark removal
+
+**Remove watermark** is off by default: images are re-encoded as PNG for metadata editing without applying watermark removal. Enable it for images with a Gemini watermark. The same checkbox applies to Single and Bulk. Changing it reprocesses loaded images from the originals and updates previews and downloads.
 
 ## Metadata
 

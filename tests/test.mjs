@@ -97,4 +97,6 @@ for (const file of [
   execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' });
 }
 
+execFileSync(process.execPath, ['tests/watermark-option.mjs'], { stdio: 'inherit' });
+
 console.log('All checks passed.');
